@@ -64,7 +64,6 @@ if ( ! -f $SCRIPTPATH/no-docker-env.csh ) then
   exit
 endif
 
-set VENV_NAME="finn_venv"
 set REQUIREMENTS="$SCRIPTPATH/requirements_full.txt"
 set REQUIREMENTS_TEMPLATE="$SCRIPTPATH/requirements_template.txt"
 
@@ -91,11 +90,24 @@ else if ( $FINN_BUILD_DIR == "") then
   setenv FINN_BUILD_DIR "$FINN_ROOT/../tmp"
 endif
 
-if ( ! $?VENV_PATH ) then
-  setenv VENV_PATH `realpath "$SCRIPTPATH/../$VENV_NAME"`
-else if ( $VENV_PATH == "") then
-  setenv VENV_PATH `realpath "$SCRIPTPATH/../$VENV_NAME"`
+if ( ! $?VENV_NAME ) then
+  setenv VENV_NAME "finn_venv"
+else if ( $VENV_NAME == "") then
+  setenv VENV_NAME "finn_venv"
 endif
+
+if ( ! $?VENV_PATH ) then
+  setenv VENV_PATH `realpath "$SCRIPTPATH/.."`
+else if ( $VENV_PATH == "") then
+  setenv VENV_PATH `realpath "$SCRIPTPATH/.."`
+endif
+
+set VENV_PATH_FULL "$SCRIPTPATH/$VENV_NAME"
+
+# Ensure git-based deps are checked out at correct commit
+if [ "$FINN_SKIP_DEP_REPOS" = "0" ]; then
+  ./fetch-repos.sh
+fi
 
 # Activate Spack environment
 source $SPACK_PATH/setup-env.csh
@@ -105,10 +117,10 @@ spack env activate .
 spack install -y
 
 # Create/Activate Python VENV
-if ( ! -f "$VENV_PATH/bin/activate" ) then
-  python -m venv $VENV_PATH
+if ( ! -f "$VENV_PATH_FULL/bin/activate" ) then
+  python -m venv $VENV_PATH_FULL
 endif
-source "$VENV_PATH/bin/activate.csh"
+source "$VENV_PATH_FULL/bin/activate.csh"
 
 # Check if requirements have already been installed, install if not
 pip install -r $REQUIREMENTS

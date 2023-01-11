@@ -63,7 +63,7 @@ if [ ! -f $SCRIPTPATH/no-docker-env.sh ]; then
   echo "Rerun from finn root"
   exit
 fi
-VENV_NAME="finn_venv"
+
 REQUIREMENTS="$SCRIPTPATH/requirements_full.txt"
 REQUIREMENTS_TEMPLATE="$SCRIPTPATH/requirements_template.txt"
 
@@ -75,10 +75,17 @@ cat $REQUIREMENTS_TEMPLATE | sed "s|SCRIPTPATH|${SCRIPTPATH}|gi" > $REQUIREMENTS
 : ${FINN_SKIP_DEP_REPOS="0"}
 : ${FINN_ROOT=$SCRIPTPATH}
 : ${FINN_BUILD_DIR="$FINN_ROOT/../tmp"}
+: ${VENV_NAME="finn_venv"}
 : ${VENV_PATH=$(realpath "$SCRIPTPATH/../$VENV_NAME")}
+VENV_PATH_FULL="$VENV_PATH/$VENV_NAME"
 
 export FINN_ROOT=$FINN_ROOT
 export FINN_BUILD_DIR=$FINN_BUILD_DIR
+
+# Ensure git-based deps are checked out at correct commit
+if [ "$FINN_SKIP_DEP_REPOS" = "0" ]; then
+  ./fetch-repos.sh
+fi
 
 # Activate Spack environment
 source $SPACK_PATH/setup-env.sh
@@ -88,21 +95,16 @@ spack env activate .
 spack install -y
 
 # Create/Activate Python VENV
-if [ ! -f "$VENV_PATH/bin/activate" ]; then
-  python -m venv $VENV_PATH
+if [ ! -f "$VENV_PATH_FULL/bin/activate" ]; then
+  python -m venv $VENV_PATH_FULL
 fi
-source "$VENV_PATH/bin/activate"
+source "$VENV_PATH_FULL/bin/activate"
 
 # Check if requirements have already been installed, install if not
 pip install -r $REQUIREMENTS
 
 # ensure build dir exists locally
 mkdir -p $FINN_BUILD_DIR
-
-# Ensure git-based deps are checked out at correct commit
-if [ "$FINN_SKIP_DEP_REPOS" = "0" ]; then
-  ./fetch-repos.sh
-fi
 
 if [ -n "$FINN_XILINX_PATH" ]; then
   VITIS_PATH="$FINN_XILINX_PATH/Vitis/$FINN_XILINX_VERSION/"
