@@ -58,16 +58,17 @@ if [ $env_flag = 1 ]; then
 fi
 
 # Absolute path to this script, e.g. /home/user/bin/foo.sh
-SCRIPT=$(readlink -f "$0")
-# Absolute path this script is in, thus /home/user/bin
-SCRIPTPATH=$(dirname "$SCRIPT")
+SCRIPTPATH=$(pwd)
+if [ ! -f $SCRIPTPATH/no-docker-env.sh ]; then
+  echo "Rerun from finn root"
+  exit
+fi
 VENV_NAME="finn_venv"
-SPACK_ENV_NAME="finn_env"
 REQUIREMENTS="$SCRIPTPATH/requirements_full.txt"
 REQUIREMENTS_TEMPLATE="$SCRIPTPATH/requirements_template.txt"
 
 # Set paths for local python requirements
-cat $REQUIREMENTS_TEMPLATE | sed "s|\$SCRIPTPATH|${SCRIPTPATH}|gi" > $REQUIREMENTS
+cat $REQUIREMENTS_TEMPLATE | sed "s|SCRIPTPATH|${SCRIPTPATH}|gi" > $REQUIREMENTS
 
 # the settings below will be taken from environment variables if available,
 # otherwise the defaults below will be used
@@ -80,13 +81,10 @@ export FINN_ROOT=$FINN_ROOT
 export FINN_BUILD_DIR=$FINN_BUILD_DIR
 
 # Activate Spack environment
-source $SPACK_PATH
+source $SPACK_PATH/setup-env.sh
 spack compiler find --scope site
-env_list=$(spack env list)
-if [[ $env_list != *"$SPACK_ENV_NAME"* ]]; then
-  spack env create $SPACK_ENV_NAME spack.yaml
-fi
-spack env activate $SPACK_ENV_NAME
+spack env create -d .
+spack env activate .
 spack install -y
 
 # Create/Activate Python VENV
